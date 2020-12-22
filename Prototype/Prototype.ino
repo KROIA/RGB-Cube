@@ -224,6 +224,9 @@ void update();
  
 void setColor(byte x, byte y, byte z, const Color &color);
 void setColor(byte x, byte y, byte z, byte red, byte green, byte blue);
+
+
+bool readSerialData();
  
 void setup() {
   Serial.begin(115200);
@@ -323,8 +326,8 @@ void setup() {
   TMR1_CMPLD10 = F_CPU_ACTUAL/30000000;
   TMR1_CTRL0 = TMR_CTRL_CM(1) | TMR_CTRL_PCS(8) | TMR_CTRL_LENGTH ;  // prescale
   #else
-  TMR1_COMP10  = 100; // count up to this val, interrupt,  and start again
-  TMR1_CMPLD10 = 100;
+  TMR1_COMP10  = 150; // count up to this val, interrupt,  and start again
+  TMR1_CMPLD10 = 150;
   TMR1_CTRL0 = TMR_CTRL_CM(1) | TMR_CTRL_PCS(8) | TMR_CTRL_LENGTH ;  // prescale
   #endif
   
@@ -335,22 +338,6 @@ void setup() {
 //-----------------------------------
   delay(100);
   layerTimer.begin(layerISR,5000_Hz);
-  /*attachInterruptVector(IRQ_QTIMER2, layerISR);
-  CCM_CCGR6 |= CCM_CCGR6_QTIMER2(CCM_CCGR_ON);
-  TMR2_CTRL0 = 0x0000; // stop
-  TMR2_LOAD0 = 0x0000; // start val after compare
-  #ifdef I2C_SPPED_FAST
-  TMR2_COMP10  = 100; // count up to this val, interrupt,  and start again
-  TMR2_CMPLD10 = 100;
-  #else
-  TMR2_COMP10  = 200; // count up to this val, interrupt,  and start again
-  TMR2_CMPLD10 = 200;
-  #endif
-  TMR2_CTRL0 = TMR_CTRL_CM(1) | TMR_CTRL_PCS(8) | TMR_CTRL_LENGTH ;  // prescale
-  TMR2_CSCTRL0 &= ~(TMR_CSCTRL_TCF1); // clear
-  TMR2_CSCTRL0 |= TMR_CSCTRL_TCF1EN;// enable interrupt
-  NVIC_ENABLE_IRQ(IRQ_QTIMER2);*/
-
 //-------------------------------------
 //reset();        // added by aoc
   // Transmit to the TLC59116
@@ -392,191 +379,18 @@ void setup() {
   update();
   Serial.println("setup done");
   delay(1000);
-  /* for(int z=0; z<layerAmount; z++)
-  {
-    byte value = 255;
-
-   
-   
-    for(int x=0; x<dataPorts; x++)
-    {
-      for(int y=0; y<16; y++)
-      {
-
-        value = 255;
-        setBrightness(z,x,y, value);
-      }
-    }
-  }*/
   update();
 }
 void loop() {
   for(;;){
-
-//Serial.println(GPIO6_DR,BIN);
-//Serial.println(layerBitMask,BIN);
-  /*  if(layerShiftData == B10000000)
-    {
-      for(byte i=0; i<16; i++)
-  {
-    setBrightness(0,0,i,(byte)(sin(counter+i*3.1415/4.f)*30.f));
-    setBrightness(0,1,i,(byte)(sin(counter+i*3.1415/4.f)*30.f));
-
-   // setBrightness(0,0,i,255);
-  //  setBrightness(0,1,i,255);
-  }
-  for(byte i=8; i<16; i++)
-  {
-    //setBrightness(0,i,(byte)(sin(counter+i*3.1415/4.f)*30.f));
-    //setBrightness(1,i,(byte)(sin(counter+i*3.1415/4.f)*30.f));
-
-    setBrightness(0,0,i,0);
-    setBrightness(0,1,i,0);
-  }
-    }else if(layerShiftData == B00000001)
-    {
-      for(byte i=8; i<16; i++)
-  {
-    //setBrightness(0,i,(byte)(sin(counter+i*3.1415/8.f)*30.f));
-    //setBrightness(1,i,(byte)(sin(counter+i*3.1415/8.f)*30.f));
-
-    setBrightness(1,0,i,255);
-    setBrightness(1,1,i,255);
-  }
-  for(byte i=0; i<8; i++)
-  {
-    //setBrightness(0,i,(byte)(sin(counter+i*3.1415/4.f)*30.f));
-    //setBrightness(1,i,(byte)(sin(counter+i*3.1415/4.f)*30.f));
-
-    setBrightness(1,0,i,0);
-    setBrightness(1,1,i,0);
-  }
-    }else{
-       for(byte i=0; i<16; i++)
-  {
-    //setBrightness(0,i,(byte)(sin(counter+i*3.1415/4.f)*30.f));
-    //setBrightness(1,i,(byte)(sin(counter+i*3.1415/4.f)*30.f));
-
-    setBrightness(2,0,i,0);
-    setBrightness(2,1,i,0);
-  }
-    }*/
-
-
-  /*for(int z=0; z<layerAmount; z++)
-  {
-    byte value =0;
-     //byte value = 255;
-    //Serial.println(value);
-   
-    
-    for(int x=0; x<dataPorts; x++)
-    {
-      for(int y=0; y<16; y++)
-      {
-        
-        switch(z)
-        {
-          case 0:
-            if(x==0)
-            value = (byte)((sin(counter)+1)*255.f);
-            else if(x==4)
-            value = (byte)((sin(counter-2/3*3.1415)+1)*255.f);
-            else if(x==8)
-            value = (byte)((sin(counter+2/3*3.1415)+1)*255.f);
-          break;
-          case 1:
-          
-           // value = (byte)((sin(-counter+y*3.1415/8.f)+1)*30.f);
-          break;
-          case 2:
-           // value = y*y;
-          break;
-          case 3:
-           
-          break;
-          case 4:
-            //value = counter2;
-          break;
-          case 5:
-           // value = rand()%255;
-          break;
-          case 6:
-           // value = 255;
-          break;
-          case 7:
-        // value = 255;
-          break;
-        }
-        //value = (byte)((sin(counter+y*3.1415/8.f)+1)*128.f);
-        setBrightness(z,x,y, value);
-      }
-    }
-  }*/
-	float poti = ((float)analogRead(A9)/500.f);
-	for(byte z=0; z<cubeSize; z++)
+	if(Serial.available())
 	{
-		for(byte x=0; x<cubeSize; x++)
-		{
-			for(byte y=0; y<cubeSize; y++)
-			{
-			
-				float _2PI_3 = 2.f*PI / 3.f;
-				byte red   = 0; 
-				byte green = 0;
-				byte blue  = 0;
-				
-				float _x = mapF((float)x,0,4,0,2.f*PI);
-				float _y = mapF((float)y,0,4,0,2.f*PI);
-				float _z = mapF((float)z,0,4,0,2.f*PI);
-				
-				/*
-				float xOffset = (float)x/4.f;
-				float yOffset = (float)y/4.f;
-				float zOffset = (float)z/4.f;
-				red   = (sin(counter+xOffset+_2PI_3)+1)*128;
-				green = (sin(counter+xOffset+_2PI_3*2)+1)*128;
-				blue  = (sin(counter+xOffset)+1)*128;*/
-				float scale = 1;
-				//red   = ((sin((float)_y*scale + counter)*sin((float)_z*scale + counter)) +1)*128;
-				//green = ((sin((float)_x*scale + counter)*sin((float)_z*scale + counter)) +1)*128;
-				//blue  = ((sin((float)_x*scale + counter)*sin((float)_y*scale + counter)) +1)*50;
-        float yOffset = (float)y/3.f + (float)z;
-				
-				float _red   = (sin(_x*poti + counter + yOffset))*255.f;
-				float _green = (sin(_x*poti + counter + _2PI_3 + yOffset))*255.f;
-				float _blue  = (sin(_x*poti + counter + 2*_2PI_3 + yOffset))*255.f;
-				
-				if(_red > 0)
-					if(_red > 255)
-						red = 255;
-					else
-						red = (byte) _red;
-				if(_green > 0)
-					if(_green > 255)
-						green = 255;
-					else
-						green = (byte) _green;
-				if(_blue > 0)
-					if(_blue > 255)
-						blue = 255;
-					else
-						blue = (byte) _blue;
-				
-				
-				
-				setColor(x,y,z,red,green,blue);
-			}
-		}	
+		readSerialData();
+		update();	
 	}
-	
-	
-		
-	update();
-	delay(50);
-	counter+= 0.1;
-	counter2++;
-  
+	//delay(10);
+	//setColor(3,2,3,255,0,0);
+	//update();
   }
 }
 void layerISR()
@@ -1168,10 +982,14 @@ void setBrightness(byte layer,byte port, byte led, byte brightness)
 void update()
 {
   cubeStorageBusy = true;
+  Serial.println("update:");
   for(byte z=0; z<layerAmount; z++)
   {
 	#ifdef CUBE_4
 	byte pos = 0;
+	Serial.print("Layer: ");
+	Serial.print(z);
+	Serial.print(" ");
 	for(byte x=0; x<cubeSize; x++)
 	{
 		for(byte y=0; y<cubeSize; y++)
@@ -1179,46 +997,75 @@ void update()
 			internBrightnessList[z][redPortOffset][pos]   = cubeData[x][y][z].red;
 			internBrightnessList[z][greenPortOffset][pos] = cubeData[x][y][z].green;
 			internBrightnessList[z][bluePortOffset][pos]  = cubeData[x][y][z].blue;
+			
+			Serial.print(internBrightnessList[z][redPortOffset][pos] );
+			Serial.print(" ");
+			Serial.print(internBrightnessList[z][greenPortOffset][pos] );
+			Serial.print(" ");
+			Serial.print(internBrightnessList[z][bluePortOffset][pos] );
+			Serial.print("  ");
+			
 			pos++;
 		}
 	}
+	Serial.println();
+	
 	#endif
 	
 	#ifdef CUBE_8
 	 notDefined
 	#endif
-    /*for(int x=0; x<dataPorts; x++)
-    {
-      for(int y=0; y<16; y++)
-      {
-        internBrightnessList[z][x][y] = brightnessList[z][x][y];
-      }
-    }*/
   }
+  Serial.println("\nupdate end");
   cubeStorageBusy = false;
- /* //PORTD |= B00000100;
-  beginTransmission(ADDRESS);
-  // Write to the GRPPWM register
-  write(byte(AUTO_INCREMENT_BRIGHTNESS + TLC_59116_PWM0));
-  byte *arr = new byte[dataPorts];
-  for(byte i=0; i<16; i++)
-  {
-    
-    for(byte j=0; j<dataPorts; j++)
-    {
-      arr[j] = brightnessList[j][i];
-    }
-    write(arr);
-    
-  }
-  delete[] arr;
-  endTransmission();
-  //digitalWrite(debugPin,LOW);
- // PORTD &= B11111011;*/
 }
 double mapF(double in, double inMin, double inMax, double outMin, double outMax)
 { 
 	double out; 
 	out = (in-inMin)/(inMax-inMin)*(outMax-outMin) + outMin; 
 	return out; 
+}
+
+bool readSerialData()
+{
+	size_t arraySize = cubeSize*2 + cubeSize*cubeSize*cubeSize*3 + 1 +50;
+	
+	for(byte z=0; z<cubeSize; z++)
+	{
+		
+		byte layerIndex;
+		if(Serial.read() == 'L')
+		{
+			layerIndex = Serial.read()-1;
+			
+			/*Serial.print("L");
+			Serial.print(layerIndex);
+			Serial.print(" ");*/
+			for(byte x=0; x<cubeSize; x++)
+			{
+				for(byte y=0; y<cubeSize; y++)
+				{
+					//if(!Serial.available())
+						//return false;
+					
+					cubeData[x][y][layerIndex].red   = Serial.read();//buffer[iterator];  	iterator++;
+					cubeData[x][y][layerIndex].green = Serial.read();//buffer[iterator];  	iterator++;
+					cubeData[x][y][layerIndex].blue  = Serial.read();//buffer[iterator];  	iterator++;
+		
+					/*
+					Serial.print(cubeData[x][y][layerIndex].red  );
+					Serial.print(" ");
+					Serial.print(cubeData[x][y][layerIndex].green);
+					Serial.print(" ");
+					Serial.print(cubeData[x][y][layerIndex].blue );
+					Serial.print("  ");*/
+					
+				}
+			}
+			//Serial.print("\n");
+		}
+	}
+	//Serial.println("finish");
+
+	return true;
 }
