@@ -11,7 +11,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(usbDevice,SIGNAL(readyRead()),this,SLOT(onSerialDataAvailable()));
 
     endOfMessage = "\n";
-    baudrate = QSerialPort::Baud115200;
+    //baudrate = QSerialPort::Baud115200;
+    baudrate = 1000000;
 
     serialDeviceIsConnected = false;
     getAvalilableSerialDevices();
@@ -90,7 +91,7 @@ void MainWindow::serialWrite(QString message)
     if(serialDeviceIsConnected == true)
     {
         usbDevice->write(message.toUtf8()); // Send the message to the device
-        qDebug() << "Message to device: "<<message;
+   //     qDebug() << "Message to device: "<<message;
     }
 }
 void MainWindow::serialWrite(char *message)
@@ -98,7 +99,7 @@ void MainWindow::serialWrite(char *message)
     if(serialDeviceIsConnected == true)
     {
         usbDevice->write(message); // Send the message to the device
-        qDebug() << "Message to device: "<<message;
+  //      qDebug() << "Message to device: "<<message;
     }
 }
 void MainWindow::serialRead()
@@ -208,13 +209,16 @@ void MainWindow::on_timerFinished()
         m_currentImageSequenceIndex = 0;
         m_imageSequence.clear();
         timer->stop();
+        if(ui->sendCubeDataCycle_checkBox->isChecked())
+             on_sendCubeData_pushButton_clicked();
     }
+
 }
 
 
 void MainWindow::on_sendCubeData_pushButton_clicked()
 {
-    sendImageSequence("sprite",17,100);
+    sendImageSequence("sprite",17,10);
     //sendImage("cube.png");
 }
 void MainWindow::sendImage(const QString &filename)
@@ -289,4 +293,20 @@ void MainWindow::sendImageSequence(const QString &filename,unsigned int count,un
         m_imageSequence.push_back(filename+separator+( i<10?"0":"" )+QString::number(i)+".png");
     }
     timer->start(interval);
+}
+
+void MainWindow::on_clear_pushButton_clicked()
+{
+    m_currentImageSequenceIndex = 0;
+    m_imageSequence.clear();
+    timer->stop();
+    sendImage("clear.png");
+}
+
+void MainWindow::on_light_pushButton_clicked()
+{
+    m_currentImageSequenceIndex = 0;
+    m_imageSequence.clear();
+    timer->stop();
+    sendImage("light.png");
 }

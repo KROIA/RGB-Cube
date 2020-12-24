@@ -45,6 +45,10 @@ class MainWindow : public QMainWindow
 
         void on_sendCubeData_pushButton_clicked();
 
+        void on_clear_pushButton_clicked();
+
+        void on_light_pushButton_clicked();
+
     private:
         void getAvalilableSerialDevices();
         void serialRead();

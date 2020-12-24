@@ -25,9 +25,11 @@ Pin  | Port | Bit
 #define CUBE_4
 //#define CUBE_8 
  
-#define I2C_SPPED_FAST
-#define USE_PORTMANIPULATION
-//#define DISABLE_DEBUG_PINS
+//#define I2C_SPPED_FAST
+#define I2C_USE_PORTMANIPULATION
+#define DISABLE_DEBUG_PINS
+#define I2C_IGNORE_ACK
+
 #define USE_TIMER_ONE
 #define USE_TIMERTOOL
 
@@ -229,7 +231,7 @@ void setColor(byte x, byte y, byte z, byte red, byte green, byte blue);
 bool readSerialData();
  
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(1000000);
   pinMode(A9,INPUT);
 
   //Layer Multiplexer
@@ -326,18 +328,19 @@ void setup() {
   TMR1_CMPLD10 = F_CPU_ACTUAL/30000000;
   TMR1_CTRL0 = TMR_CTRL_CM(1) | TMR_CTRL_PCS(8) | TMR_CTRL_LENGTH ;  // prescale
   #else
-  TMR1_COMP10  = 150; // count up to this val, interrupt,  and start again
-  TMR1_CMPLD10 = 150;
+  TMR1_COMP10  = 50; // count up to this val, interrupt,  and start again
+  TMR1_CMPLD10 = 50;
   TMR1_CTRL0 = TMR_CTRL_CM(1) | TMR_CTRL_PCS(8) | TMR_CTRL_LENGTH ;  // prescale
   #endif
   
   TMR1_CSCTRL0 &= ~(TMR_CSCTRL_TCF1); // clear
   TMR1_CSCTRL0 |= TMR_CSCTRL_TCF1EN;// enable interrupt
+  NVIC_SET_PRIORITY(IRQ_QTIMER1, 255); // Top priority
   NVIC_ENABLE_IRQ(IRQ_QTIMER1);
   #endif
 //-----------------------------------
   delay(100);
-  layerTimer.begin(layerISR,5000_Hz);
+  layerTimer.begin(layerISR,400_Hz);
 //-------------------------------------
 //reset();        // added by aoc
   // Transmit to the TLC59116
@@ -433,9 +436,9 @@ void interruptFunc()
   #ifdef USE_TIMER_ONE
     TMR1_CSCTRL0 &= ~TMR_CSCTRL_TCF1; // clear the timer flag
   #endif
-  /*#ifndef DISABLE_DEBUG_PINS
+  #ifndef DISABLE_DEBUG_PINS
   digitalWriteFast(debugPin2,!digitalRead(debugPin2));
-  #endif*/
+  #endif
   //digitalWriteFast(debugPin,!digitalReadFast(debugPin));
   if(!bussy) 
   {
@@ -448,7 +451,7 @@ void interruptFunc()
     //busState &= ~uint32_t(1<<sda1Bit); //sda bit ausschalten
    
 
-    #ifndef USE_PORTMANIPULATION
+    #ifndef I2C_USE_PORTMANIPULATION
 		digitalWriteFast(i2c_sda_0,0);
 		digitalWriteFast(i2c_sda_4,0);
 		digitalWriteFast(i2c_sda_8,0);
@@ -491,7 +494,7 @@ void interruptFunc()
      #ifndef DISABLE_DEBUG_PINS
     digitalWriteFast(debugPin,1);
     #endif
-    #ifndef USE_PORTMANIPULATION
+    #ifndef I2C_USE_PORTMANIPULATION
     digitalWriteFast(i2c_scl,0);
     #else
     GPIO7_DR &= ~uint32_t(1<<clk_Bit);
@@ -513,7 +516,7 @@ void interruptFunc()
     // set data
     //busState = (busState&~uint32_t(1<<sda1Bit)) | uint32_t(((sendingData[0][dataPosIndex] & (1<<bitIndex))>>bitIndex)<<sda1Bit);
     //GPIO7_DR = (GPIO7_DR & ~uint32_t(1<<sda1Bit)) | busState;
-    #ifndef USE_PORTMANIPULATION
+    #ifndef I2C_USE_PORTMANIPULATION
 	digitalWriteFast(i2c_sda_0,(sendingData[0][dataPosIndex] & (1<<bitIndex))>>bitIndex);
 	digitalWriteFast(i2c_sda_4,(sendingData[4][dataPosIndex] & (1<<bitIndex))>>bitIndex);
 	digitalWriteFast(i2c_sda_8,(sendingData[8][dataPosIndex] & (1<<bitIndex))>>bitIndex);
@@ -582,7 +585,7 @@ void interruptFunc()
   {
     // rise clock
    // GPIO7_DR |= uint32_t(1<<clkBit); // clk setzen
-    #ifndef USE_PORTMANIPULATION
+    #ifndef I2C_USE_PORTMANIPULATION
     digitalWriteFast(i2c_scl,1);
     #else
     GPIO7_DR |= uint32_t(1<<CORE_PIN10_BIT);
@@ -592,7 +595,7 @@ void interruptFunc()
   {
     // set data low
     //busState &= ~uint32_t(1<<sda1Bit); //sda bit ausschalten
-    #ifndef USE_PORTMANIPULATION
+    #ifndef I2C_USE_PORTMANIPULATION
 	digitalWriteFast(i2c_sda_0,0);
 	digitalWriteFast(i2c_sda_4,0);
 	digitalWriteFast(i2c_sda_8,0);
@@ -632,7 +635,7 @@ void interruptFunc()
     // last clock
     // rise clock
     //GPIO7_DR |= uint32_t(1<<clkBit); // clk setzen
-    #ifndef USE_PORTMANIPULATION
+    #ifndef I2C_USE_PORTMANIPULATION
     digitalWriteFast(i2c_scl,1);
     #else
     GPIO7_DR |= uint32_t(1<<clk_Bit);
@@ -642,7 +645,7 @@ void interruptFunc()
   {
     // make stop condition
     //GPIO7_DR |= uint32_t(1<<sda1Bit); //sda bit einschalten
-    #ifndef USE_PORTMANIPULATION
+    #ifndef I2C_USE_PORTMANIPULATION
     digitalWriteFast(i2c_sda_0,1);
 	digitalWriteFast(i2c_sda_4,1);
 	digitalWriteFast(i2c_sda_8,1);
@@ -693,7 +696,7 @@ void interruptFunc()
   {
     // rise clock and than wait for Acknowledge
    // GPIO7_DR |= uint32_t(1<<clkBit); // clk setzen
-    #ifndef USE_PORTMANIPULATION
+    #ifndef I2C_USE_PORTMANIPULATION
     digitalWriteFast(i2c_scl,1);
     #else
     GPIO7_DR |= uint32_t(1<<clk_Bit);
@@ -706,7 +709,7 @@ void interruptFunc()
   {
     // rise clock and than wait for Acknowledge
    // GPIO7_DR |= uint32_t(1<<clkBit); // clk setzen
-    #ifndef USE_PORTMANIPULATION
+    #ifndef I2C_USE_PORTMANIPULATION
     digitalWriteFast(i2c_scl,0);
     digitalWriteFast(i2c_sda_0,0);
 	digitalWriteFast(i2c_sda_4,0);
@@ -742,7 +745,8 @@ void interruptFunc()
 	#endif
                            )| ~uint32_t(1<<clk_Bit);
     #endif
-  /*  pinMode(i2c_sda_0,INPUT_PULLUP); // to read ack
+	#ifndef I2C_IGNORE_ACK
+    pinMode(i2c_sda_0,INPUT_PULLUP); // to read ack
 	pinMode(i2c_sda_4,INPUT_PULLUP); // to read ack
 	pinMode(i2c_sda_8,INPUT_PULLUP); // to read ack
 	#ifdef CUBE_8
@@ -755,7 +759,8 @@ void interruptFunc()
 		pinMode(i2c_sda_9,INPUT_PULLUP); // to read ack
 		pinMode(i2c_sda_10,INPUT_PULLUP); // to read ack
 		pinMode(i2c_sda_11,INPUT_PULLUP); // to read ack
-	#endif*/
+	#endif
+	#endif
     
     busStep = 10;
   }else if(busStep == 10)
@@ -766,7 +771,7 @@ void interruptFunc()
   {
     // rise clock and than wait for Acknowledge
    // GPIO7_DR |= uint32_t(1<<clkBit); // clk setzen
-    #ifndef USE_PORTMANIPULATION
+    #ifndef I2C_USE_PORTMANIPULATION
     digitalWriteFast(i2c_scl,1);
     #else
     GPIO7_DR |= uint32_t(1<<clk_Bit);
@@ -776,9 +781,11 @@ void interruptFunc()
   {
     // rise clock and than wait for Acknowledge
    // GPIO7_DR |= uint32_t(1<<clkBit); // clk setzen
-    /*byte ack_0 = digitalReadFast(i2c_sda_0);
-    byte ack_1 = digitalReadFast(i2c_sda_1);
-    pinMode(i2c_sda_0,OUTPUT); 
+   #ifndef I2C_IGNORE_ACK
+    byte ack_0 = digitalReadFast(i2c_sda_0);
+    byte ack_4 = digitalReadFast(i2c_sda_4);
+    byte ack_8 = digitalReadFast(i2c_sda_8);
+  pinMode(i2c_sda_0,OUTPUT); 
 	pinMode(i2c_sda_4,OUTPUT); 
 	pinMode(i2c_sda_8,OUTPUT); 
 	#ifdef CUBE_8
@@ -791,12 +798,13 @@ void interruptFunc()
 		pinMode(i2c_sda_9,OUTPUT); 
 		pinMode(i2c_sda_10,OUTPUT); 
 		pinMode(i2c_sda_11,OUTPUT); 
-	#endif*/
+	#endif
+	#endif
     
 
     // lower clock
     //GPIO7_DR &= ~uint32_t(1<<clkBit); // clk auf 0 setzen
-    #ifndef USE_PORTMANIPULATION
+    #ifndef I2C_USE_PORTMANIPULATION
     digitalWriteFast(i2c_scl,0);
     #else
     GPIO7_DR &= ~uint32_t(1<<clk_Bit);
@@ -806,9 +814,16 @@ void interruptFunc()
     #endif
     
    // busStep = 13;
-    //if(!(ack_0 + ack_1))
+   #ifndef I2C_IGNORE_ACK
+    if(!(ack_0 + ack_4 + ack_8))
+		#endif
     {
+      /*Serial.print("!ACK");
+      Serial.print(ack_0);
+      Serial.print(ack_4);
+      Serial.println(ack_8);*/
       busStep = 13;
+      //digitalWriteFast(ackErrorPin,1);
     }  
     /*else
     {
@@ -982,14 +997,14 @@ void setBrightness(byte layer,byte port, byte led, byte brightness)
 void update()
 {
   cubeStorageBusy = true;
-  Serial.println("update:");
+  //Serial.println("update:");
   for(byte z=0; z<layerAmount; z++)
   {
 	#ifdef CUBE_4
 	byte pos = 0;
-	Serial.print("Layer: ");
+	/*Serial.print("Layer: ");
 	Serial.print(z);
-	Serial.print(" ");
+	Serial.print(" ");*/
 	for(byte x=0; x<cubeSize; x++)
 	{
 		for(byte y=0; y<cubeSize; y++)
@@ -998,17 +1013,17 @@ void update()
 			internBrightnessList[z][greenPortOffset][pos] = cubeData[x][y][z].green;
 			internBrightnessList[z][bluePortOffset][pos]  = cubeData[x][y][z].blue;
 			
-			Serial.print(internBrightnessList[z][redPortOffset][pos] );
+		/*	Serial.print(internBrightnessList[z][redPortOffset][pos] );
 			Serial.print(" ");
 			Serial.print(internBrightnessList[z][greenPortOffset][pos] );
 			Serial.print(" ");
 			Serial.print(internBrightnessList[z][bluePortOffset][pos] );
-			Serial.print("  ");
+			Serial.print("  ");*/
 			
 			pos++;
 		}
 	}
-	Serial.println();
+	//Serial.println();
 	
 	#endif
 	
@@ -1016,7 +1031,7 @@ void update()
 	 notDefined
 	#endif
   }
-  Serial.println("\nupdate end");
+ // Serial.println("\nupdate end");
   cubeStorageBusy = false;
 }
 double mapF(double in, double inMin, double inMax, double outMin, double outMax)
@@ -1048,9 +1063,9 @@ bool readSerialData()
 					//if(!Serial.available())
 						//return false;
 					
-					cubeData[x][y][layerIndex].red   = Serial.read();//buffer[iterator];  	iterator++;
-					cubeData[x][y][layerIndex].green = Serial.read();//buffer[iterator];  	iterator++;
-					cubeData[x][y][layerIndex].blue  = Serial.read();//buffer[iterator];  	iterator++;
+					cubeData[x][y][layerIndex].red   = Serial.read()-1;//buffer[iterator];  	iterator++;
+					cubeData[x][y][layerIndex].green = Serial.read()-1;//buffer[iterator];  	iterator++;
+					cubeData[x][y][layerIndex].blue  = Serial.read()-1;//buffer[iterator];  	iterator++;
 		
 					/*
 					Serial.print(cubeData[x][y][layerIndex].red  );
